@@ -1,0 +1,159 @@
+---
+title: "798W Project"
+author: "Kelsey Canada"
+date: "January 20, 2016"
+output: pdf_document
+---
+
+```{r}
+HMNdata <- read.csv("KelseyData.csv", header=T, na.strings = c("NA", "9/9/99", "0:00", "#NULL!"))
+```
+
+Function code:
+```{r}
+clean.hmn <- function(HMNdata=HMNdata) {
+  library(reshape2)
+  HMNdata<-data.frame(HMNdata$Subject_ID, HMNdata$ExactAgeCalc, HMNdata$AgeGroup, HMNdata$All_Primacy, HMNdata$Hours_Sleep_LN, HMNdata$Hours_Sleep_1, HMNdata$Hours_Sleep_2, HMNdata$Hours_Sleep_3, HMNdata$Hours_Sleep_4, HMNdata$Hours_Sleep_5, HMNdata$Hours_Sleep_6, HMNdata$Hours_Sleep_7, HMNdata$Hours_Sleep_8, HMNdata$Hours_Sleep_9, HMNdata$Lorsbach_Percent, HMNdata$SM_FactRecallPercent, HMNdata$SM_FactRecogPercent, HMNdata$CMS_Scaled_Imm, HMNdata$CMS_Scaled_Delay, HMNdata$CMS_Scaled_DelRec)
+  newnames<-c("Subject_ID", "ExactAge", "AgeGroup", "PrimacyOverall", "SleepDuration_LN", "SleepDuration_N1", "SleepDuration_N2", "SleepDuration_N3","SleepDuration_N4", "SleepDuration_N5", "SleepDuration_N6", "SleepDuration_N7", "SleepDuration_N8", "SleepDuration_N9", "Lorsbach_Percent", "SourceMem_Recall", "SourceMem_Recog", "Story_Imm", "Story_Delay", "Story_Week" )
+colnames(HMNdata)<-newnames
+ cleaneddata<-(subset( HMNdata[!is.na(HMNdata$SleepDuration_LN),]))
+  cleaneddata<-melt(cleaneddata, measure.vars = c("SleepDuration_LN", "SleepDuration_N1", "SleepDuration_N2","SleepDuration_N3", "SleepDuration_N4", "SleepDuration_N5", "SleepDuration_N6","SleepDuration_N7", "SleepDuration_N8", "SleepDuration_N9"), variable.name = "Night", value.name ="SleepPerNight", na.rm=T) 
+  newlevels<-c("LastNight", "Night1", "Night2", "Night3", "Night4", "Night5", "Night6", "Night7", "Night8", "Night9")
+levels(cleaneddata$Night)<-newlevels
+  cleaneddata$AgeGroup <- as.factor(cleaneddata$AgeGroup)
+ cleaneddata<- dcast(cleaneddata, Subject_ID +   ExactAge + PrimacyOverall + Lorsbach_Percent + SourceMem_Recall+ SourceMem_Recog + Story_Imm +      Story_Delay +   Story_Week  +AgeGroup  ~ ., value.var = "SleepPerNight", fun.aggregate = mean, na.rm = TRUE)
+colnames(cleaneddata)[11]<-"AverageSleep"
+cleaneddata$AverageSleep<-as.numeric(cleaneddata$AverageSleep)
+   cleaneddata
+}
+```
+
+```{r}
+HMNclean<-clean.hmn(HMNdata)
+```
+
+Combining sleep questionairre data
+```{r}
+sleepdata <- read.csv("sleep.csv", header=T, na.strings = c("NA", "9/9/99", "0:00", "#NULL!"))
+
+sleep.subset<-data.frame(sleepdata$Subject_ID, sleepdata$Subscale_1_Bedtime_Resistance,sleepdata$Subscale_2_Sleep_Onset_Delay, sleepdata$Subscale_3_Sleep_Duration, sleepdata$Subscale_4_Sleep_Anxiety, sleepdata$Subscale_5_Night_Wakings, sleepdata$Subscale_6_Parasomnias, sleepdata$Subscale_7_Sleep_Disordered_Breathing, sleepdata$Subscale_8_Daytime_Sleepiness, sleepdata$Total_Sleep_Disturbance_Score)
+
+newnamessleep<-c("Subject_ID", "Bedtime_Resistance", "Sleep_Onset_Delay", "Sleep_Duration", "Sleep_Anxiety", "Night_Wakings", "Parasomnias", "Sleep_Disordered_Breathing","Daytime_Sleepiness", "Total_Sleep_Disturbance")
+colnames(sleep.subset)<-newnamessleep
+colnames(sleep.subset)
+
+mydata <- merge(HMNclean, sleep.subset, by=c("Subject_ID"))
+```
+
+```{r}
+pairwise.t.test(mydata$Lorsbach_Percent, mydata$AgeGroup)
+#There are significant differences on Lorsbach scores betweem 4 and 6 year olds (p=.0023), 4 and 5 year olds (p=.0001), 4 and 8 year olds (p=.0001), 5 and 7 year olds (p=.0001), 5 and 8 year olds (p=.0001), 6 and 8 year olds (p=.0003), and 7 and 8 year olds (p=.0378).
+
+pairwise.t.test(mydata$PrimacyOverall, mydata$AgeGroup)
+#The only significnant difference in scores on the Primacy Recency task are between age groups is between the scores of 4 year olds and 7 year olds.
+sum(mydata$AgeGroup==8) #8
+sum(mydata$AgeGroup==7) #15
+sum(mydata$AgeGroup==6)#21
+sum(mydata$AgeGroup==5)#10
+sum(mydata$AgeGroup==4)#14
+
+#unequal n's is an issue due to having incomplete data
+
+
+sleepquants<-as.numeric(quantile(mydata$Total_Sleep_Disturbance, na.rm=T))
+sleepquants #high score is worse here, issue with the data however that there are not enough subjects to draw meaningful conclusions.
+
+fours<-subset(mydata[mydata$AgeGroup==4,])
+sixes<-subset(mydata[mydata$AgeGroup==6,])
+
+
+t.test(fours$PrimacyOverall[fours$Total_Sleep_Disturbance<=39], fours$PrimacyOverall[fours$Total_Sleep_Disturbance>39])
+#No significant difference between four year olds above and below the mean level of sleep disturbance scores on Primacy Recency tasks. 
+t.test(sixes$PrimacyOverall[sixes$Total_Sleep_Disturbance<=39], sixes$PrimacyOverall[sixes$Total_Sleep_Disturbance>39])
+
+#No significant difference between six year olds above and below the mean level of sleep disturbance scores on Primacy Recency tasks.
+
+t.test(mydata$PrimacyOverall[mydata$Total_Sleep_Disturbance<=39], mydata$PrimacyOverall[mydata$Total_Sleep_Disturbance>39])
+#No significant difference between across all ages above and below the mean level of sleep disturbance scores on Primacy Recency tasks. 
+###
+
+t.test(sixes$Lorsbach_Percent[fours$Total_Sleep_Disturbance<=39], fours$Lorsbach_Percent[fours$Total_Sleep_Disturbance>39])
+#Approaching a significant difference between across four year olds above and below the mean level of sleep disturbance scores on the Lorsbach Task. 
+t.test(sixes$Lorsbach_Percent[sixes$Total_Sleep_Disturbance<=39], sixes$Lorsbach_Percent[sixes$Total_Sleep_Disturbance>39])
+# No significant difference between across four year olds above and below the mean level of sleep disturbance scores on the Lorsbach Task. 
+
+t.test(mydata$Lorsbach_Percent[mydata$Total_Sleep_Disturbance<=39], mydata$Lorsbach_Percent[mydata$Total_Sleep_Disturbance>39])
+#No significant difference between across all ages above and below the mean level of sleep disturbance scores on the Lorsbach Task. 
+###
+
+sleepissues<-subset(mydata[mydata$Total_Sleep_Disturbance>=41,])
+length(sleepissues$Subject_ID)
+ 
+
+#issue with the scale and validity of the measure as according to the outlines set by the CHSQ 38 of the 68 subjects included in the analysis would be in the score range for a pediatric sleep disorder
+```
+
+```{r}
+PrimacyReg <- lm(PrimacyOverall ~ Total_Sleep_Disturbance + AverageSleep + AgeGroup, data=mydata)
+summary(PrimacyReg ) # average sleep approaching significance
+
+PrimacySleep <- glm(PrimacyOverall ~ AverageSleep, data=mydata)
+summary(PrimacySleep ) # average sleep sig without age groups. 
+
+
+LorsbachReg <- lm(Lorsbach_Percent ~ Total_Sleep_Disturbance + AverageSleep + AgeGroup, data=mydata)
+summary(LorsbachReg) #age but not sleep significant
+
+LorsbachReg <- lm(Lorsbach_Percent ~ Total_Sleep_Disturbance + AverageSleep + AgeGroup, data=mydata)
+summary(LorsbachReg)
+# 4, 6, 7, 8, age differences significant 
+
+Allsleepreg<-lm(Lorsbach_Percent ~ Bedtime_Resistance + Sleep_Onset_Delay+ Sleep_Anxiety + Night_Wakings + Parasomnias +Sleep_Disordered_Breathing + Daytime_Sleepiness + Sleep_Duration+ Total_Sleep_Disturbance, data=mydata)
+summary(Allsleepreg) #nothing significant, not surpised after finding and article that failed to correlate CSHQ to PSG
+```
+
+```{r}
+#full data set
+HMN2<- read.csv("KelseyData.csv", header=T, na.strings = c("NA", "9/9/99", "0:00", "#NULL!"))
+
+fulldata<- merge(HMN2, sleep.subset, by=c("Subject_ID"))
+
+nights<-cbind( fulldata$Hours_Sleep_1,fulldata$Hours_Sleep_2,fulldata$Hours_Sleep_3+fulldata$Hours_Sleep_4,fulldata$Hours_Sleep_5,fulldata$Hours_Sleep_6,fulldata$Hours_Sleep_7,fulldata$Hours_Sleep_8,fulldata$Hours_Sleep_9)
+fulldata$AverageSleep<-rowMeans(nights, na.rm=T)
+
+LorsbachFull <- lm(Lorsbach_Percent ~  Total_Sleep_Disturbance+AverageSleep, data=fulldata)
+summary(LorsbachFull)
+
+
+PrimacyFull <- lm(All_Primacy ~  AverageSleep, data=fulldata)
+summary(PrimacyFull)
+#Sleep is signficant in predicting primacy scores.
+```
+
+```{r}
+library(ggplot2)
+
+agesleep<-ggplot(mydata, aes(y=AverageSleep, x=ExactAge)) + geom_point(aes(color = factor(AgeGroup)), position = position_jitter(height = .2, width = .2))+theme_bw()+ scale_color_brewer(palette = "PuRd")+ theme(legend.position = "top")+geom_smooth(method="glm", data=mydata, color="black")+labs(title="Average Sleep by Age")
+agesleep
+
+
+PrimacyPlot<-ggplot(mydata, aes(y=AverageSleep, x=PrimacyOverall)) + geom_point(aes(color = factor(AgeGroup)), position = position_jitter(height = .2, width = .2))+theme_bw()+ scale_color_brewer(palette = "PuRd")+ theme(legend.position = "top")+ ylab("Average Sleep") + xlab("Overall Primacy Score")+geom_smooth(method="glm", data=mydata, color="black")+labs(title="Primacy Scores and Average Sleep by Age")
+PrimacyPlot
+
+LorsbachPlot<-ggplot(mydata, aes(y=AverageSleep, x=Lorsbach_Percent)) + geom_point(aes(color = factor(AgeGroup)), position = position_jitter(height = .2, width = .2))+theme_bw()+ scale_color_brewer(palette = "PuRd")+ theme(legend.position = "top")+ ylab("Average Sleep") + xlab("Lorsbach Percent")+geom_smooth(method="glm", data=mydata, color="black")+labs(title="Lorsbach Percentage Score and Average Sleep by Age")
+LorsbachPlot
+
+PrimacyAgeBox<-ggplot(mydata, aes(x=AgeGroup, y=PrimacyOverall)) + geom_boxplot() +theme_bw()+labs(title="Distribution of Primacy Scores by Age")
+PrimacyAgeBox
+
+PrimacySleepBox<-ggplot(mydata, aes(x=AverageSleep, y=PrimacyOverall)) + geom_boxplot()+facet_wrap(~AgeGroup)+theme_bw()+labs(title="Primacy Scores and Average Sleep by Age")
+PrimacySleepBox
+
+LorsAgeBox<-ggplot(mydata, aes(x=AgeGroup, y=Lorsbach_Percent)) + geom_boxplot()+theme_bw()+labs(title="Distribution of Lorsbach Percentage Scores by Age")
+LorsAgeBox
+
+LorsSleepBox<-ggplot(mydata, aes(x=AverageSleep, y=Lorsbach_Percent)) + geom_boxplot()+facet_wrap(~AgeGroup)+theme_bw()+labs(title="Primacy Scores and Average Sleep by Age")
+LorsSleepBox
+
+```
+
