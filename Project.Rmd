@@ -95,18 +95,18 @@ length(sleepissues$Subject_ID)
 
 ```{r}
 PrimacyReg <- lm(PrimacyOverall ~ Total_Sleep_Disturbance + AverageSleep + AgeGroup, data=mydata)
-summary(PrimacyReg ) # average sleep approaching significance
+summary(PrimacyReg ) # average sleep approaching significance, age signficant
 
 PrimacySleep <- glm(PrimacyOverall ~ AverageSleep, data=mydata)
-summary(PrimacySleep ) # average sleep sig without age groups. 
+summary(PrimacySleep ) # average sleep sig without age groups <.05
 
 
 LorsbachReg <- lm(Lorsbach_Percent ~ Total_Sleep_Disturbance + AverageSleep + AgeGroup, data=mydata)
-summary(LorsbachReg) #age but not sleep significant
+summary(LorsbachReg) #age significant < .000,  but not sleep.
 
 LorsbachReg <- lm(Lorsbach_Percent ~ Total_Sleep_Disturbance + AverageSleep + AgeGroup, data=mydata)
 summary(LorsbachReg)
-# 4, 6, 7, 8, age differences significant 
+# 4, 6, 7, 8, age differences significant < .000
 
 Allsleepreg<-lm(Lorsbach_Percent ~ Bedtime_Resistance + Sleep_Onset_Delay+ Sleep_Anxiety + Night_Wakings + Parasomnias +Sleep_Disordered_Breathing + Daytime_Sleepiness + Sleep_Duration+ Total_Sleep_Disturbance, data=mydata)
 summary(Allsleepreg) #nothing significant, not surpised after finding and article that failed to correlate CSHQ to PSG
@@ -121,13 +121,13 @@ fulldata<- merge(HMN2, sleep.subset, by=c("Subject_ID"))
 nights<-cbind( fulldata$Hours_Sleep_1,fulldata$Hours_Sleep_2,fulldata$Hours_Sleep_3+fulldata$Hours_Sleep_4,fulldata$Hours_Sleep_5,fulldata$Hours_Sleep_6,fulldata$Hours_Sleep_7,fulldata$Hours_Sleep_8,fulldata$Hours_Sleep_9)
 fulldata$AverageSleep<-rowMeans(nights, na.rm=T)
 
-LorsbachFull <- lm(Lorsbach_Percent ~  Total_Sleep_Disturbance+AverageSleep, data=fulldata)
+LorsbachFull <- lm(Lorsbach_Percent ~  Total_Sleep_Disturbance+AverageSleep+AgeGroup, data=fulldata)
 summary(LorsbachFull)
-
+#No significant predictors except age group <.01.
 
 PrimacyFull <- lm(All_Primacy ~  AverageSleep, data=fulldata)
 summary(PrimacyFull)
-#Sleep is signficant in predicting primacy scores.
+#Sleep is signficant in predicting primacy scores < .05.
 ```
 
 ```{r}
@@ -135,14 +135,14 @@ library(ggplot2)
 
 agesleep<-ggplot(mydata, aes(y=AverageSleep, x=ExactAge)) + geom_point(aes(color = factor(AgeGroup)), position = position_jitter(height = .2, width = .2))+theme_bw()+ scale_color_brewer(palette = "PuRd")+ theme(legend.position = "top")+geom_smooth(method="glm", data=mydata, color="black")+labs(title="Average Sleep by Age")
 agesleep
-
+#Plot of average sleep and the exact age as colored by age group. The amount of sleep on average per night decreases slightly as age inreases.
 
 PrimacyPlot<-ggplot(mydata, aes(y=AverageSleep, x=PrimacyOverall)) + geom_point(aes(color = factor(AgeGroup)), position = position_jitter(height = .2, width = .2))+theme_bw()+ scale_color_brewer(palette = "PuRd")+ theme(legend.position = "top")+ ylab("Average Sleep") + xlab("Overall Primacy Score")+geom_smooth(method="glm", data=mydata, color="black")+labs(title="Primacy Scores and Average Sleep by Age")
 PrimacyPlot
-
+#Plot of average sleep and Overall Primacy scores factored by age. The regression is significant for both age group and average sleep.
 LorsbachPlot<-ggplot(mydata, aes(y=AverageSleep, x=Lorsbach_Percent)) + geom_point(aes(color = factor(AgeGroup)), position = position_jitter(height = .2, width = .2))+theme_bw()+ scale_color_brewer(palette = "PuRd")+ theme(legend.position = "top")+ ylab("Average Sleep") + xlab("Lorsbach Percent")+geom_smooth(method="glm", data=mydata, color="black")+labs(title="Lorsbach Percentage Score and Average Sleep by Age")
 LorsbachPlot
-
+#Plot of average sleep and Lorsbach Percentage scores factored by age. The regression is significant for both age group.
 PrimacyAgeBox<-ggplot(mydata, aes(x=AgeGroup, y=PrimacyOverall)) + geom_boxplot() +theme_bw()+labs(title="Distribution of Primacy Scores by Age")
 PrimacyAgeBox
 
@@ -157,3 +157,4 @@ LorsSleepBox
 
 ```
 
+As we didn't run regression analysis or pairwise t.test those are my "non-trivial" aspects for my analysis. Another was the function that cleans my data, which you did for your data but was not covered in class on how to utilize on a data set. 
